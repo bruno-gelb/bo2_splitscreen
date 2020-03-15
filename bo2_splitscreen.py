@@ -10,9 +10,6 @@ import click
 import psutil
 import win32api
 
-logging.basicConfig(level=logging.DEBUG)
-ASYNCIO_TIMEOUT = 5
-
 
 def detect_current_display() -> int:
     win_id = windll.user32.GetForegroundWindow()
@@ -41,6 +38,13 @@ def detect_current_resolution() -> Tuple[int, int]:
     logging.debug(f'resolutions={resolutions}')
 
     return int(resolutions[current_display - 1][0]), int(resolutions[current_display - 1][1])
+
+
+logging.basicConfig(level=logging.DEBUG)
+ASYNCIO_TIMEOUT = 5
+SCREEN_WIDTH, SCREEN_HEIGHT = detect_current_resolution()
+HALF_SCREEN_WIDTH = int(SCREEN_WIDTH / 2)
+HALF_SCREEN_HEIGHT = int(SCREEN_HEIGHT / 2)
 
 
 def autodiscover_sandboxie() -> Union[None, str]:
@@ -108,83 +112,75 @@ def loop_in_thread(loop):
     loop.run_until_complete(hide_taskbar_when_game_is_up())
 
 
-def launch(bo2_path: str, players: int,
-           screen_width: int, screen_height: int) -> None:
-    half_screen_width = int(screen_width / 2)
-    half_screen_height = int(screen_height / 2)
+def launch_for_player(bo2_path: str, player_id: int,
+                      width: int = SCREEN_WIDTH, height: int = SCREEN_HEIGHT,
+                      w_position: int = 0, h_position: int = 0) -> None:
+    logging.info(f'Launching the player {player_id + 1} instance ..')
+    run([
+        autodiscover_sandboxie(),
+        f'/box:bo2_splitscreen_{player_id}',
+        bo2_path,
+        '-nolauncher',
+        '-NoStartupMovies',
+        '-WindowedFullscreen',
+        '-AlwaysFocus',
 
-    logging.debug('Making sure taskbar would be hidden for the game ..')
+        f'-SaveDataId={player_id}',
+        f'-ControllerOffset={player_id}',
 
-    loop = asyncio.get_event_loop()
-    t = threading.Thread(target=loop_in_thread, args=(loop,))
-    t.start()
+        f'-ResX={width}',
+        f'-ResY={height}',
+        f'-WindowPosX={w_position}',
+        f'-WindowPosY={h_position}',
+    ])
 
-    logging.debug(f'Launching {bo2_path} for {players} players ..')
+
+def launch_splitscreen(bo2_path: str, players: int) -> None:
+    logging.debug(f'{players} players selected. Launching ..')
+
     if players == 1:
-        run([
-            bo2_path,
-            '-nolauncher',
-            '-NoStartupMovies',
-        ])
+        player_id = 0
+        launch_for_player(bo2_path, player_id)
 
     elif players == 2:
-        logging.info('Launching the first instance ..')
         player_id = 0
+        launch_for_player(bo2_path, player_id,
+                          height=HALF_SCREEN_HEIGHT)
 
-        run([
-            autodiscover_sandboxie(),
-            f'/box:bo2_splitscreen_{player_id}',
-            bo2_path,
-            '-nolauncher',
-            '-NoStartupMovies',
-            '-WindowedFullscreen',
-            '-AlwaysFocus',
-
-            f'-ResX={screen_width}',
-            f'-ResY={half_screen_height}',
-            '-WindowPosX=0',
-            '-WindowPosY=0',
-
-            f'-SaveDataId={player_id}',
-            f'-ControllerOffset={player_id}',
-        ])
-
-        logging.info('Launching the second instance ..')
         player_id = 1
+        launch_for_player(bo2_path, player_id,
+                          height=HALF_SCREEN_HEIGHT, h_position=HALF_SCREEN_HEIGHT)
 
-        run([
-            autodiscover_sandboxie(),
-            f'/box:bo2_splitscreen_{player_id}',
-            bo2_path,
-            '-nolauncher',
-            '-NoStartupMovies',
-            '-WindowedFullscreen',
-            '-AlwaysFocus',
+    elif players >= 3:
+        player_id = 0
+        launch_for_player(bo2_path, player_id,
+                          width=HALF_SCREEN_WIDTH, height=HALF_SCREEN_HEIGHT)
 
-            f'-ResX={screen_width}',
-            f'-ResY={half_screen_height}',
-            '-WindowPosX=0',
-            f'-WindowPosY={half_screen_height}',
+        player_id = 1
+        launch_for_player(bo2_path, player_id,
+                          width=HALF_SCREEN_WIDTH, height=HALF_SCREEN_HEIGHT,
+                          w_position=HALF_SCREEN_WIDTH)
 
-            f'-SaveDataId={player_id}',
-            f'-ControllerOffset={player_id}',
-        ])
+        player_id = 2
+        launch_for_player(bo2_path, player_id,
+                          width=HALF_SCREEN_WIDTH, height=HALF_SCREEN_HEIGHT,
+                          h_position=HALF_SCREEN_HEIGHT)
 
-    elif players == 3:
-        print('This is not supported yet, sorry.')
-
-    elif players == 4:
-        print('This is not supported yet, sorry.')
+        if players == 4:
+            player_id = 3
+            launch_for_player(bo2_path, player_id,
+                              width=HALF_SCREEN_WIDTH, height=HALF_SCREEN_HEIGHT,
+                              w_position=HALF_SCREEN_WIDTH, h_position=HALF_SCREEN_HEIGHT)
 
 
 @click.command()
 def main():
-    screen_width, screen_height = detect_current_resolution()
-    logging.debug(f'Screen resolution is {screen_width}x{screen_height}')
+    logging.debug(f'Screen resolution is {SCREEN_WIDTH}x{SCREEN_HEIGHT}')
+
     bo2_path = autodiscover_bo2()
     if not bo2_path:
         click.echo("Couldn't' find a path to your Borderlands2.exe")
-        bo2_path = click.prompt('Please enter it:', type=str)
+        bo2_path = click.prompt('Please enter it', type=str)
         while not os.path.isfile(bo2_path):
             bo2_path = click.prompt(
                 "That's not a valid path: no such file exists. Please enter it once again",
@@ -197,7 +193,12 @@ def main():
         click.echo('WARNING: make sure Steam is running before proceeding')
 
     players = click.prompt('How many players (1-4)', type=int, default=2, show_choices=False)
-    launch(bo2_path, players, screen_width, screen_height)
+
+    loop = asyncio.get_event_loop()
+    t = threading.Thread(target=loop_in_thread, args=(loop,))
+    t.start()
+
+    launch_splitscreen(bo2_path, players)
 
 
 if __name__ == '__main__':

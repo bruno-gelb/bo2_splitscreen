@@ -13,10 +13,12 @@ run Borderlands 2 on PC with split screen for set number of players. Windows onl
 
 install latest [Sandboxie](https://www.sandboxie.com/AllVersions). The official site is garbage, so you may use a mirror.
 
-disable steam cloud sync for your Borderlands 2 saves
-(Steam -> Library -> Borderlands 2 -> Properties .. -> Updates -> Steam Cloud -> Enable Steam Cloud sync for Borderlands 2).
+create 4 boxes in Sandboxies: `bo2_splitscreen_0`, `bo2_splitscreen_1`, `bo2_splitscreen_2`, `bo2_splitscreen_3`,  
+configure in each one of them direct access to Steam install directory, Steam libraries and Borderlands 2 directory withing My Documents.
 
-This is necessary since you'll be running multiple instances from the single Steam user.
+disable steam cloud sync for your Borderlands 2 saves  
+(`Steam -> Library -> Borderlands 2 -> Properties .. -> Updates -> Steam Cloud -> Enable Steam Cloud sync for Borderlands 2`).  
+This is necessary since you'll be running multiple instances from the single Steam user.  
 
 ```bash
 pipenv install
@@ -30,15 +32,14 @@ run `bo2_splitscreen.py` with Python 3.8
 
 ### todos
 
-* tweak height resolution if possible
 * download and install sandboxie automatically
+* autocreate sandboxie boxes if they're absent, autoconfigure their settings
 * autodiscover sandboxie binary path
 * autodiscover bo2 binary path
 * autodiscover steam binary path
-* autocreate sandboxie boxes if they're absent, autoconfigure their settings
 * launch steam automatically inside the each sandboxie box before launching the game.  
 First one (server) should run Steam online, other offline.  
-They must launch in timeouts since otherwise there would be dll access issue
+Steam instances must launch withing timeouts, otherwise there would be dll access issue
 * freeze the app via py2exe / pyinstaller
 * add simple GUI instead of / in addition to current CLI
 * provide beautiful instructions
