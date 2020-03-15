@@ -18,7 +18,8 @@ TODO
 * autodiscover bo2 binary path
 * autodiscover steam binary path
 * autocreate sandboxie boxes if they're absent, autoconfigure their settings
-* launch offline-moded steam automatically inside the each sandboxie box before launching the game
+* launch steam automatically inside the each sandboxie box before launching the game.  
+First one (server) should run Steam online, other offline
 * freeze the app via py2exe / pyinstaller
 * add simple GUI instead of / in addition to current CLI
 * provide beautiful instructions

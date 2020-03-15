@@ -1,6 +1,6 @@
 import logging
 import os
-from subprocess import run
+from subprocess import run, call
 from typing import Union, Tuple
 
 import click
@@ -10,6 +10,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 def get_screen_resolution() -> Tuple[int, int]:
     cmd = 'wmic desktopmonitor get screenwidth, screenheight'
+    return (3840, 2160)  # fixme wmic is getting resolution for the wrong display
     return tuple(map(int, os.popen(cmd).read().split()[-2::][::-1]))
 
 
@@ -47,7 +48,7 @@ def launch(bo2_path: str, players: int, split_type: Union[str, None],
         print('This is not supported yet, sorry.')
 
     elif players == 2 and split_type == 'horizontal':
-        # call('taskkill /f /im explorer.exe')
+        call('taskkill /f /im explorer.exe')
 
         logging.info('Launching the first instance ..')
         player_id = 0
@@ -69,8 +70,6 @@ def launch(bo2_path: str, players: int, split_type: Union[str, None],
             f'-SaveDataId={player_id}',
             f'-ControllerOffset={player_id}',
         ])
-
-        # call('start explorer.exe')
 
         logging.info('Launching the second instance ..')
         player_id = 1
