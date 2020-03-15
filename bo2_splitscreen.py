@@ -1,17 +1,35 @@
 import logging
 import os
+from ctypes import windll
 from subprocess import run, call
 from typing import Union, Tuple
 
 import click
+import win32api
 
 logging.basicConfig(level=logging.DEBUG)
 
 
-def get_screen_resolution() -> Tuple[int, int]:
-    cmd = 'wmic desktopmonitor get screenwidth, screenheight'
-    return (3840, 2160)  # fixme wmic is getting resolution for the wrong display
-    return tuple(map(int, os.popen(cmd).read().split()[-2::][::-1]))
+def detect_current_display() -> int:
+    win_id = windll.user32.GetForegroundWindow()
+    monitor_default_to_nearest = 2
+    active_monitor_id = windll.user32.MonitorFromWindow(win_id, monitor_default_to_nearest)
+
+    monitors = win32api.EnumDisplayMonitors()
+    for i, monitor in enumerate(monitors):
+        if monitor[0].handle == active_monitor_id:
+            return i + 1
+
+
+def detect_current_resolution() -> Tuple[int, int]:
+    current_display = detect_current_display()
+    logging.debug(f'current_display={current_display}')
+    cmd = 'wmic path Win32_VideoController get VideoModeDescription'
+
+    resolutions = ([l.strip().split('x')[:2]
+                    for l in os.popen(cmd).read().split('\n') if l and 'VideoModeDescription' not in l])
+
+    return int(resolutions[current_display - 1][0]), int(resolutions[current_display - 1][1])
 
 
 def autodiscover_sandboxie() -> Union[None, str]:
@@ -30,7 +48,7 @@ def autodiscover_bo2() -> Union[None, str]:
         return None
 
 
-def launch(bo2_path: str, players: int, split_type: Union[str, None],
+def launch(bo2_path: str, players: int,
            screen_width: int, screen_height: int) -> None:
     half_screen_width = int(screen_width / 2)
     half_screen_height = int(screen_height / 2)
@@ -44,10 +62,7 @@ def launch(bo2_path: str, players: int, split_type: Union[str, None],
             '-NoStartupMovies',
         ])
 
-    elif players == 2 and split_type == 'vertical':
-        print('This is not supported yet, sorry.')
-
-    elif players == 2 and split_type == 'horizontal':
+    elif players == 2:
         call('taskkill /f /im explorer.exe')
 
         logging.info('Launching the first instance ..')
@@ -103,7 +118,7 @@ def launch(bo2_path: str, players: int, split_type: Union[str, None],
 
 @click.command()
 def main():
-    screen_width, screen_height = get_screen_resolution()
+    screen_width, screen_height = detect_current_resolution()
     logging.debug(f'Screen resolution is {screen_width}x{screen_height}')
     bo2_path = autodiscover_bo2()
     if not bo2_path:
@@ -120,14 +135,8 @@ def main():
         # todo autocheck if Steam is running or not. If it's not, launch the Steam first
         click.echo('WARNING: make sure Steam is running before proceeding')
 
-    split_type = None
     players = click.prompt('How many players (1-4)', type=int, default=2, show_choices=False)
-    if players == 2:
-        split_type = click.prompt('How you prefer to split your screen?',
-                                  type=click.Choice(['vertical', 'horizontal']),
-                                  show_choices=True,
-                                  default='horizontal')
-    launch(bo2_path, players, split_type, screen_width, screen_height)
+    launch(bo2_path, players, screen_width, screen_height)
 
 
 if __name__ == '__main__':
