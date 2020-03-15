@@ -1,24 +1,33 @@
+import asyncio
 import logging
 import os
+import threading
 from ctypes import windll
 from subprocess import run, call
 from typing import Union, Tuple
 
 import click
+import psutil
 import win32api
 
 logging.basicConfig(level=logging.DEBUG)
+ASYNCIO_TIMEOUT = 5
 
 
 def detect_current_display() -> int:
     win_id = windll.user32.GetForegroundWindow()
     monitor_default_to_nearest = 2
     active_monitor_id = windll.user32.MonitorFromWindow(win_id, monitor_default_to_nearest)
+    logging.debug(f'active_monitor_id={active_monitor_id}')
 
     monitors = win32api.EnumDisplayMonitors()
+    logging.debug(f'monitors={monitors}')
     for i, monitor in enumerate(monitors):
+        logging.debug(win32api.GetMonitorInfo(monitor[0].handle))
+        display_id = int(win32api.GetMonitorInfo(monitor[0].handle)['Device'].split('DISPLAY')[-1])
         if monitor[0].handle == active_monitor_id:
-            return i + 1
+            logging.debug(f'display_id={display_id}')
+            return display_id
 
 
 def detect_current_resolution() -> Tuple[int, int]:
@@ -26,8 +35,10 @@ def detect_current_resolution() -> Tuple[int, int]:
     logging.debug(f'current_display={current_display}')
     cmd = 'wmic path Win32_VideoController get VideoModeDescription'
 
-    resolutions = ([l.strip().split('x')[:2]
-                    for l in os.popen(cmd).read().split('\n') if l and 'VideoModeDescription' not in l])
+    resolutions = list(reversed([l.strip().split('x')[:2]
+                                 for l in os.popen(cmd).read().split('\n') if l and 'VideoModeDescription' not in l]))
+
+    logging.debug(f'resolutions={resolutions}')
 
     return int(resolutions[current_display - 1][0]), int(resolutions[current_display - 1][1])
 
@@ -40,6 +51,50 @@ def autodiscover_sandboxie() -> Union[None, str]:
         return None
 
 
+def hide_taskbar() -> None:
+    call('taskkill /f /im explorer.exe')
+
+
+def show_taskbar() -> None:
+    call(r'.\show_taskbar.bat')
+
+
+def periodic(period):
+    def scheduler(fcn):
+        async def wrapper(*args, **kwargs):
+            while True:
+                asyncio.create_task(fcn(*args, **kwargs))
+                await asyncio.sleep(period)
+
+        return wrapper
+
+    return scheduler
+
+
+@periodic(ASYNCIO_TIMEOUT)
+async def hide_taskbar_when_game_is_up(*args, **kwargs) -> None:
+    await asyncio.sleep(ASYNCIO_TIMEOUT)
+    for p in psutil.process_iter(attrs=['pid', 'name']):
+        if p.info['name'] == 'Borderlands2.exe':
+            hide_taskbar()
+
+            this = asyncio.ensure_future(hide_taskbar_when_game_is_up())
+            this.cancel()
+
+            await show_taskbar_when_game_is_over()
+
+
+@periodic(ASYNCIO_TIMEOUT)
+async def show_taskbar_when_game_is_over(*args, **kwargs) -> None:
+    await asyncio.sleep(ASYNCIO_TIMEOUT)
+    for p in psutil.process_iter(attrs=['pid', 'name']):
+        if p.info['name'] == 'explorer.exe':
+            return
+        if p.info['name'] == 'Borderlands2.exe':
+            return
+    show_taskbar()
+
+
 def autodiscover_bo2() -> Union[None, str]:
     # todo implement autodiscover
     if True:
@@ -48,13 +103,23 @@ def autodiscover_bo2() -> Union[None, str]:
         return None
 
 
+def loop_in_thread(loop):
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(hide_taskbar_when_game_is_up())
+
+
 def launch(bo2_path: str, players: int,
            screen_width: int, screen_height: int) -> None:
     half_screen_width = int(screen_width / 2)
     half_screen_height = int(screen_height / 2)
 
-    logging.debug(f'Launching {bo2_path} for {players} players with split_type {split_type} ..')
+    logging.debug('Making sure taskbar would be hidden for the game ..')
 
+    loop = asyncio.get_event_loop()
+    t = threading.Thread(target=loop_in_thread, args=(loop,))
+    t.start()
+
+    logging.debug(f'Launching {bo2_path} for {players} players ..')
     if players == 1:
         run([
             bo2_path,
@@ -63,8 +128,6 @@ def launch(bo2_path: str, players: int,
         ])
 
     elif players == 2:
-        call('taskkill /f /im explorer.exe')
-
         logging.info('Launching the first instance ..')
         player_id = 0
 
@@ -112,8 +175,6 @@ def launch(bo2_path: str, players: int,
 
     elif players == 4:
         print('This is not supported yet, sorry.')
-
-    logging.debug('All launched.')
 
 
 @click.command()

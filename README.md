@@ -6,7 +6,7 @@ run Borderlands 2 on PC with split screen for set number of players. Windows onl
 
 * support for multi-monitor configurations
 * support for localized versions of the game
-* Windows taskbar automatic hiding
+* hide Windows taskbar automatically whilst in game
 * 1-4 players
 
 ### installation
@@ -30,7 +30,6 @@ run `bo2_splitscreen.py` with Python 3.8
 
 ### todos
 
-* run explorer again after all bo2 instances were terminated
 * tweak height resolution if possible
 * download and install sandboxie automatically
 * autodiscover sandboxie binary path
@@ -38,7 +37,8 @@ run `bo2_splitscreen.py` with Python 3.8
 * autodiscover steam binary path
 * autocreate sandboxie boxes if they're absent, autoconfigure their settings
 * launch steam automatically inside the each sandboxie box before launching the game.  
-First one (server) should run Steam online, other offline
+First one (server) should run Steam online, other offline.  
+They must launch in timeouts since otherwise there would be dll access issue
 * freeze the app via py2exe / pyinstaller
 * add simple GUI instead of / in addition to current CLI
 * provide beautiful instructions
