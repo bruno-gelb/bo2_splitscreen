@@ -32,6 +32,7 @@ run `bo2_splitscreen.py` with Python 3.8
 
 ### todos
 
+* (if possible) automatically set up voice settings for all players except the first one
 * asynco fails to show explorer after the game is closed: fix the exception
 * download and install sandboxie automatically
 * autocreate sandboxie boxes if they're absent, autoconfigure their settings
