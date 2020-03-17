@@ -60,7 +60,7 @@ def hide_taskbar() -> None:
 
 
 def show_taskbar() -> None:
-    call(r'.\show_taskbar.bat')
+    call(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'show_taskbar.bat'))
 
 
 def periodic(period):
