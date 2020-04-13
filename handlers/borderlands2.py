@@ -4,9 +4,8 @@ import os
 import threading
 from ctypes import windll
 from subprocess import run, call
-from typing import Union, Tuple
+from typing import Tuple
 
-import click
 import psutil
 import win32api
 
@@ -45,14 +44,6 @@ ASYNCIO_TIMEOUT = 5
 SCREEN_WIDTH, SCREEN_HEIGHT = detect_current_resolution()
 HALF_SCREEN_WIDTH = int(SCREEN_WIDTH / 2)
 HALF_SCREEN_HEIGHT = int(SCREEN_HEIGHT / 2)
-
-
-def autodiscover_sandboxie() -> Union[None, str]:
-    # todo implement autodiscover
-    if True:
-        return r'C:\Program Files\Sandboxie\Start.exe'
-    else:
-        return None
 
 
 def hide_taskbar() -> None:
@@ -99,14 +90,6 @@ async def show_taskbar_when_game_is_over(*args, **kwargs) -> None:
     show_taskbar()
 
 
-def autodiscover_bo2() -> Union[None, str]:
-    # todo implement autodiscover
-    if True:
-        return 'D:\Steam\steamapps\common\Borderlands_2_RU\Binaries\Win32\Borderlands2.exe'
-    else:
-        return None
-
-
 def loop_in_thread(loop):
     asyncio.set_event_loop(loop)
     loop.run_until_complete(hide_taskbar_when_game_is_up())
@@ -117,7 +100,7 @@ def launch_for_player(bo2_path: str, player_id: int,
                       w_position: int = 0, h_position: int = 0) -> None:
     logging.info(f'Launching the player {player_id + 1} instance ..')
     run([
-        autodiscover_sandboxie(),
+        r'C:\Program Files\Sandboxie\Start.exe',
         f'/box:bo2_splitscreen_{player_id}',
         bo2_path,
         '-nolauncher',
@@ -173,33 +156,14 @@ def launch_splitscreen(bo2_path: str, players: int) -> None:
                               w_position=HALF_SCREEN_WIDTH, h_position=HALF_SCREEN_HEIGHT)
 
 
-@click.command()
-def main():
+def handler():
     logging.debug(f'Screen resolution is {SCREEN_WIDTH}x{SCREEN_HEIGHT}')
 
-    bo2_path = autodiscover_bo2()
-    if not bo2_path:
-        click.echo("Couldn't' find a path to your Borderlands2.exe")
-        bo2_path = click.prompt('Please enter it', type=str)
-        while not os.path.isfile(bo2_path):
-            bo2_path = click.prompt(
-                "That's not a valid path: no such file exists. Please enter it once again",
-                type=str
-            )
+    bo2_path = r'C:\Program Files (x86)\Steam\steamapps\common\Borderlands_2_RU\Binaries\Win32\Borderlands2.exe'
     logging.debug(f'bo2_path={bo2_path}')
-
-    if 'steamapps' in bo2_path:
-        # todo autocheck if Steam is running or not. If it's not, launch the Steam first
-        click.echo('WARNING: make sure Steam is running before proceeding')
-
-    players = click.prompt('How many players (1-4)', type=int, default=2, show_choices=False)
 
     loop = asyncio.get_event_loop()
     t = threading.Thread(target=loop_in_thread, args=(loop,))
     t.start()
 
-    launch_splitscreen(bo2_path, players)
-
-
-if __name__ == '__main__':
-    main()
+    launch_splitscreen(bo2_path, 2)
