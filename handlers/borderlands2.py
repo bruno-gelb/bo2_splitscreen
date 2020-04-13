@@ -156,7 +156,7 @@ def launch_splitscreen(bo2_path: str, players: int) -> None:
                               w_position=HALF_SCREEN_WIDTH, h_position=HALF_SCREEN_HEIGHT)
 
 
-def handler():
+def bo2_handler():
     logging.debug(f'Screen resolution is {SCREEN_WIDTH}x{SCREEN_HEIGHT}')
 
     bo2_path = r'C:\Program Files (x86)\Steam\steamapps\common\Borderlands_2_RU\Binaries\Win32\Borderlands2.exe'

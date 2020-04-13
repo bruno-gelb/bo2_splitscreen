@@ -1,0 +1,8 @@
+import logging
+
+LOG_DIR = r'C:\Users\bruno\projects\coop_station'
+LOG_FILE = 'coop_station.log'
+LOG_LEVEL = logging.DEBUG
+
+SENTRY_DSN = 'ENTER_YOUR_SENTRY_DSN_HERE'
+ENVIRONMENT = 'dev'

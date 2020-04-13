@@ -9,6 +9,7 @@ pypiwin32 = "*"
 psutil = "*"
 pyside2 = "*"
 pyyaml = "*"
+sentry-sdk = "*"
 
 [requires]
 python_version = "3.8"
